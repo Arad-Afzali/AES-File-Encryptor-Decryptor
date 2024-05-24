@@ -135,6 +135,21 @@ class AESApp:
         else:
             messagebox.showerror("Error", "Please provide text or choose a file and key for decryption.")
 
+    def encrypt_file(self):
+        if hasattr(self, 'enc_file_path'):
+            key = self.enc_key_entry.get()
+            encrypted_filepath = encrypt.encrypt_file(key, self.enc_file_path)
+            self.enc_output_text.delete('1.0', tk.END)
+            self.enc_output_text.insert(tk.END, f"Encrypted file saved as: {encrypted_filepath}")
+            return encrypted_filepath
+
+    def decrypt_file(self):
+        if hasattr(self, 'dec_file_path'):
+            password = self.dec_key_entry.get()
+            decrypted_filepath = decrypt.decrypt_file(password, self.dec_file_path)
+            self.dec_output_text.delete('1.0', tk.END)
+            self.dec_output_text.insert(tk.END, f"Decrypted file saved as: {decrypted_filepath}")
+            return decrypted_filepath
 if __name__ == "__main__":
     root = tk.Tk()
     app = AESApp(root)

@@ -29,5 +29,6 @@ def encrypt_file(key, filepath):
             if len(chunk) % AES.block_size != 0:
                 chunk = pad(chunk)
             f_out.write(cipher.encrypt(chunk))
-    
+    with open(filepath + "_key.txt", 'w') as key_file:
+        key_file.write(key)
     return encrypted_filepath
