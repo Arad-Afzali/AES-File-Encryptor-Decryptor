@@ -2,10 +2,8 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinter import ttk
 import generatekey
-import encrypt
-import decrypt
-import threading
 import multiprocessing
+import worker
 
 class AESApp:
     def __init__(self, root):
@@ -112,62 +110,76 @@ class AESApp:
     def encrypt_data(self):
         key = self.key_entry_encrypt.get()
         text = self.text_entry_encrypt.get()
+        self.progress_queue = multiprocessing.Queue()
+        self.result_queue = multiprocessing.Queue()
 
         if key and text:
-            thread = threading.Thread(target=self.encrypt_text, args=(key, text))
-            thread.start()
+            self.process = multiprocessing.Process(target=worker.encrypt_text_process, args=(key, text, self.result_queue))
+            self.process.start()
+            self.root.after(100, self.check_process_encrypt)
         elif key and hasattr(self, 'encrypt_file_path'):
             self.progress_bar_encrypt['value'] = 0
-            thread = threading.Thread(target=self.encrypt_file, args=(key, self.encrypt_file_path))
-            thread.start()
+            self.process = multiprocessing.Process(target=worker.encrypt_file_process, args=(key, self.encrypt_file_path, self.progress_queue, self.result_queue))
+            self.process.start()
+            self.root.after(100, self.check_process_encrypt)
         else:
             messagebox.showerror("Error", "Please provide text or choose a file and key for encryption.")
-
-    def encrypt_text(self, key, text):
-        encrypted_text = encrypt.encrypt_text(key, text)
-        self.encrypted_text_output.delete(1.0, tk.END)
-        self.encrypted_text_output.insert(tk.END, encrypted_text)
-
-    def encrypt_file(self, key, filepath):
-        encrypted_file = encrypt.encrypt_file(key, filepath, self.update_progress_encrypt)
-        messagebox.showinfo("Encrypted File", f"File saved as {encrypted_file}")
 
     def decrypt_data(self):
         key = self.key_entry_decrypt.get()
         text = self.text_entry_decrypt.get().strip()
+        self.progress_queue = multiprocessing.Queue()
+        self.result_queue = multiprocessing.Queue()
 
         if key and text:
-            thread = threading.Thread(target=self.decrypt_text, args=(key, text))
-            thread.start()
+            self.process = multiprocessing.Process(target=worker.decrypt_text_process, args=(key, text, self.result_queue))
+            self.process.start()
+            self.root.after(100, self.check_process_decrypt)
         elif key and hasattr(self, 'decrypt_file_path'):
             self.progress_bar_decrypt['value'] = 0
-            thread = threading.Thread(target=self.decrypt_file, args=(key, self.decrypt_file_path))
-            thread.start()
+            self.process = multiprocessing.Process(target=worker.decrypt_file_process, args=(key, self.decrypt_file_path, self.progress_queue, self.result_queue))
+            self.process.start()
+            self.root.after(100, self.check_process_decrypt)
         else:
             messagebox.showerror("Error", "Please provide text or choose a file and key for decryption.")
 
-    def decrypt_text(self, key, text):
-        try:
-            decrypted_text = decrypt.decrypt_text(key, text)
-            self.decrypted_text_output.delete(1.0, tk.END)
-            self.decrypted_text_output.insert(tk.END, decrypted_text)
-        except Exception as e:
-            messagebox.showerror("Decryption Error", f"An error occurred during decryption: {e}")
+    def check_process_encrypt(self):
+        if self.process.is_alive():
+            self.root.after(100, self.check_process_encrypt)
+            self.update_progress(self.progress_bar_encrypt, self.progress_queue)
+        else:
+            self.process.join()
+            if not self.result_queue.empty():
+                result = self.result_queue.get()
+                if isinstance(result, str):
+                    self.encrypted_text_output.delete(1.0, tk.END)
+                    self.encrypted_text_output.insert(tk.END, result)
+                elif isinstance(result, dict) and 'file' in result:
+                    encrypted_file = result['file']
+                    messagebox.showinfo("Encryption Complete", f"File encrypted successfully: {encrypted_file}")
+            self.progress_bar_encrypt['value'] = 0
 
-    def decrypt_file(self, key, filepath):
-        try:
-            decrypted_file = decrypt.decrypt_file(key, filepath, self.update_progress_decrypt)
-            messagebox.showinfo("Decrypted File", f"File saved as {decrypted_file}")
-        except Exception as e:
-            messagebox.showerror("Decryption Error", f"An error occurred during file decryption: {e}")
+    def check_process_decrypt(self):
+        if self.process.is_alive():
+            self.root.after(100, self.check_process_decrypt)
+            self.update_progress(self.progress_bar_decrypt, self.progress_queue)
+        else:
+            self.process.join()
+            if not self.result_queue.empty():
+                result = self.result_queue.get()
+                if isinstance(result, str):
+                    self.decrypted_text_output.delete(1.0, tk.END)
+                    self.decrypted_text_output.insert(tk.END, result)
+                elif isinstance(result, dict) and 'file' in result:
+                    decrypted_file = result['file']
+                    messagebox.showinfo("Decryption Complete", f"File decrypted successfully: {decrypted_file}")
+            self.progress_bar_decrypt['value'] = 0
 
-    def update_progress_encrypt(self, value):
-        self.progress_bar_encrypt['value'] = value
-        self.root.update_idletasks()  # Ensure the GUI updates
-
-    def update_progress_decrypt(self, value):
-        self.progress_bar_decrypt['value'] = value
-        self.root.update_idletasks()  # Ensure the GUI updates
+    def update_progress(self, progress_bar, progress_queue):
+        while not progress_queue.empty():
+            value = progress_queue.get()
+            progress_bar['value'] = value
+            self.root.update_idletasks()
 
 if __name__ == "__main__":
     root = tk.Tk()
