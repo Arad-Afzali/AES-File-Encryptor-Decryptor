@@ -12,7 +12,7 @@ This project provides a graphical user interface (GUI) for encrypting and decryp
 1. **Clone the repository**:
     ```bash
     git clone https://github.com/Arad-Afzali/AES-enc-dyc.git
-    cd yourproject
+    cd AES-File-Encryptor-Decryptor
     ```
 
 2. **Create and activate a virtual environment** (recommended):
