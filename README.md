@@ -11,7 +11,7 @@ This project provides a graphical user interface (GUI) for encrypting and decryp
 
 1. **Clone the repository**:
     ```bash
-    git clone https://github.com/Arad-Afzali/AES-enc-dyc.git
+    git clone https://github.com/Arad-Afzali/AES-File-Encryptor-Decryptor.git
     cd AES-File-Encryptor-Decryptor
     ```
 
