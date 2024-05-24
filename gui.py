@@ -114,7 +114,8 @@ class AESApp:
         self.result_queue = multiprocessing.Queue()
 
         if key and text:
-            self.process = multiprocessing.Process(target=worker.encrypt_text_process, args=(key, text, self.result_queue))
+            self.progress_bar_encrypt['value'] = 0
+            self.process = multiprocessing.Process(target=worker.encrypt_text_process, args=(key, text, self.progress_queue, self.result_queue))
             self.process.start()
             self.root.after(100, self.check_process_encrypt)
         elif key and hasattr(self, 'encrypt_file_path'):
@@ -132,7 +133,8 @@ class AESApp:
         self.result_queue = multiprocessing.Queue()
 
         if key and text:
-            self.process = multiprocessing.Process(target=worker.decrypt_text_process, args=(key, text, self.result_queue))
+            self.progress_bar_decrypt['value'] = 0
+            self.process = multiprocessing.Process(target=worker.decrypt_text_process, args=(key, text, self.progress_queue, self.result_queue))
             self.process.start()
             self.root.after(100, self.check_process_decrypt)
         elif key and hasattr(self, 'decrypt_file_path'):
