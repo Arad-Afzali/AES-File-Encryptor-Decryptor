@@ -1,45 +1,32 @@
 from Crypto.Cipher import AES
-from Crypto.Util.Padding import unpad
 import binascii
+import os
+
+def unpad(data):
+    padding_length = data[-1]
+    return data[:-padding_length]
 
 def decrypt_text(key, ciphertext):
-    key = binascii.unhexlify(key)
-    
-    # Ensure the ciphertext has an even length
-    if len(ciphertext) % 2 != 0:
-        raise ValueError("Ciphertext has an odd length, which is invalid for hex decoding.")
-    
     ciphertext = binascii.unhexlify(ciphertext)
-    iv = ciphertext[:16]
-    ciphertext = ciphertext[16:]
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    plaintext = unpad(cipher.decrypt(ciphertext), AES.block_size)
-    return plaintext.decode()
+    iv = ciphertext[:AES.block_size]
+    cipher = AES.new(binascii.unhexlify(key), AES.MODE_CBC, iv)
+    decrypted = cipher.decrypt(ciphertext[AES.block_size:])
+    return unpad(decrypted).decode()
 
 def decrypt_file(key, filepath):
-    key = binascii.unhexlify(key)
-    
-    with open(filepath, 'rb') as f:
-        ciphertext = f.read()
-    
-    iv = ciphertext[:16]
-    ciphertext = ciphertext[16:]
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    plaintext = unpad(cipher.decrypt(ciphertext), AES.block_size)
-    
     decrypted_filepath = filepath.replace('.enc', '')
-    with open(decrypted_filepath, 'wb') as f:
-        f.write(plaintext)
+    
+    with open(filepath, 'rb') as f_in, open(decrypted_filepath, 'wb') as f_out:
+        iv = f_in.read(AES.block_size)
+        cipher = AES.new(binascii.unhexlify(key), AES.MODE_CBC, iv)
+        next_chunk = f_in.read(1024 * AES.block_size)
+        
+        while next_chunk:
+            chunk, next_chunk = next_chunk, f_in.read(1024 * AES.block_size)
+            if not next_chunk:
+                chunk = unpad(cipher.decrypt(chunk))
+            else:
+                chunk = cipher.decrypt(chunk)
+            f_out.write(chunk)
     
     return decrypted_filepath
-
-if __name__ == "__main__":
-    import sys
-    mode = sys.argv[1]
-    key = sys.argv[2]
-    data = sys.argv[3]
-    
-    if mode == "text":
-        print(decrypt_text(key, data))
-    elif mode == "file":
-        print(decrypt_file(key, data))

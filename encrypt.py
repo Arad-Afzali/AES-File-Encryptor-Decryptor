@@ -1,39 +1,33 @@
 from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad
-import os
-import binascii
 import secrets
+import binascii
+import os
+
+def pad(data):
+    padding_length = AES.block_size - len(data) % AES.block_size
+    padding = bytes([padding_length] * padding_length)
+    return data + padding
+
+def unpad(data):
+    padding_length = data[-1]
+    return data[:-padding_length]
 
 def encrypt_text(key, plaintext):
-    key = binascii.unhexlify(key)
-    iv = secrets.token_bytes(16)  # AES block size for CBC mode is 16 bytes
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    ciphertext = cipher.encrypt(pad(plaintext.encode(), AES.block_size))
-    return binascii.hexlify(iv + ciphertext).decode()
+    iv = secrets.token_bytes(AES.block_size)
+    cipher = AES.new(binascii.unhexlify(key), AES.MODE_CBC, iv)
+    encrypted = iv + cipher.encrypt(pad(plaintext.encode()))
+    return binascii.hexlify(encrypted).decode()
 
 def encrypt_file(key, filepath):
-    key = binascii.unhexlify(key)
-    iv = secrets.token_bytes(16)
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    
-    with open(filepath, 'rb') as f:
-        plaintext = f.read()
-    
-    ciphertext = cipher.encrypt(pad(plaintext, AES.block_size))
+    iv = secrets.token_bytes(AES.block_size)
+    cipher = AES.new(binascii.unhexlify(key), AES.MODE_CBC, iv)
     encrypted_filepath = filepath + '.enc'
-    
-    with open(encrypted_filepath, 'wb') as f:
-        f.write(iv + ciphertext)
+
+    with open(filepath, 'rb') as f_in, open(encrypted_filepath, 'wb') as f_out:
+        f_out.write(iv)
+        while chunk := f_in.read(1024 * AES.block_size):  # read in chunks
+            if len(chunk) % AES.block_size != 0:
+                chunk = pad(chunk)
+            f_out.write(cipher.encrypt(chunk))
     
     return encrypted_filepath
-
-if __name__ == "__main__":
-    import sys
-    mode = sys.argv[1]
-    key = sys.argv[2]
-    data = sys.argv[3]
-    
-    if mode == "text":
-        print(encrypt_text(key, data))
-    elif mode == "file":
-        print(encrypt_file(key, data))
