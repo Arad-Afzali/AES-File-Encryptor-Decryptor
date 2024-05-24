@@ -171,45 +171,45 @@ class AESApp:
 
     def encrypt_data(self):
         key = self.key_entry_encrypt.get()
-        text = self.text_entry_encrypt.get()
+        text = self.text_entry_encrypt.get().strip()
         self.progress_queue = multiprocessing.Queue()
         self.result_queue = multiprocessing.Queue()
 
-        if key and text:
+        if key and text and not self.encrypt_file_path:
             self.current_task_type = "text"
             self.progress_bar_encrypt_text['value'] = 0
             self.process = multiprocessing.Process(target=worker.encrypt_text_process, args=(key, text, self.progress_queue, self.result_queue))
             self.process.start()
             self.root.after(100, self.check_process_encrypt)
-        elif key and self.encrypt_file_path:
+        elif key and self.encrypt_file_path and not text:
             self.current_task_type = "file"
             self.progress_bar_encrypt_file['value'] = 0
             self.process = multiprocessing.Process(target=worker.encrypt_file_process, args=(key, self.encrypt_file_path, self.progress_queue, self.result_queue))
             self.process.start()
             self.root.after(100, self.check_process_encrypt)
         else:
-            messagebox.showerror("Error", "Please provide text or choose a file and key for encryption.")
-
+            messagebox.showerror("Error", "Please provide either text or choose a file for encryption, and ensure a key is provided.")
+    
     def decrypt_data(self):
         key = self.key_entry_decrypt.get()
         text = self.text_entry_decrypt.get().strip()
         self.progress_queue = multiprocessing.Queue()
         self.result_queue = multiprocessing.Queue()
 
-        if key and text:
+        if key and text and not self.decrypt_file_path:
             self.current_task_type = "text"
             self.progress_bar_decrypt_text['value'] = 0
             self.process = multiprocessing.Process(target=worker.decrypt_text_process, args=(key, text, self.progress_queue, self.result_queue))
             self.process.start()
             self.root.after(100, self.check_process_decrypt)
-        elif key and self.decrypt_file_path:
+        elif key and self.decrypt_file_path and not text:
             self.current_task_type = "file"
             self.progress_bar_decrypt_file['value'] = 0
             self.process = multiprocessing.Process(target=worker.decrypt_file_process, args=(key, self.decrypt_file_path, self.progress_queue, self.result_queue))
             self.process.start()
             self.root.after(100, self.check_process_decrypt)
         else:
-            messagebox.showerror("Error", "Please provide text or choose a file and key for decryption.")
+            messagebox.showerror("Error", "Please provide either text or choose a file for decryption, and ensure a key is provided.")
 
     def check_process_encrypt(self):
         if self.process.is_alive():
