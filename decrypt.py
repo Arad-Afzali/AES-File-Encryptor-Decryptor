@@ -13,20 +13,21 @@ def decrypt_text(key, ciphertext):
     decrypted = cipher.decrypt(ciphertext[AES.block_size:])
     return unpad(decrypted).decode()
 
-def decrypt_file(key, filepath):
+def decrypt_file(key, filepath, progress_callback=None):
     decrypted_filepath = filepath.replace('.enc', '')
-    
+    filesize = os.path.getsize(filepath)
+    total_chunks = (filesize // (1024 * AES.block_size)) + 1
+
     with open(filepath, 'rb') as f_in, open(decrypted_filepath, 'wb') as f_out:
         iv = f_in.read(AES.block_size)
         cipher = AES.new(binascii.unhexlify(key), AES.MODE_CBC, iv)
-        next_chunk = f_in.read(1024 * AES.block_size)
-        
-        while next_chunk:
-            chunk, next_chunk = next_chunk, f_in.read(1024 * AES.block_size)
+        for i, next_chunk in enumerate(iter(lambda: f_in.read(1024 * AES.block_size), b'')):
             if not next_chunk:
-                chunk = unpad(cipher.decrypt(chunk))
+                chunk = unpad(cipher.decrypt(next_chunk))
             else:
-                chunk = cipher.decrypt(chunk)
+                chunk = cipher.decrypt(next_chunk)
             f_out.write(chunk)
+            if progress_callback:
+                progress_callback((i + 1) / total_chunks * 100)
     
     return decrypted_filepath
