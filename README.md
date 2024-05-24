@@ -16,6 +16,7 @@ This project provides a graphical user interface (GUI) for encrypting and decryp
     ```
 
 2. **Create and activate a virtual environment** (recommended):
+    
     **On macOS/Linux:**
     ```bash
     python3 -m venv venv
