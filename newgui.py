@@ -116,9 +116,6 @@ class AESApp:
         self.key_entry_decrypt = tk.Entry(frame, width=64)
         self.key_entry_decrypt.grid(row=0, column=1, padx=5, pady=5)
 
-        self.generate_key_button_decrypt = tk.Button(frame, text="Generate Key", width=20, command=self.generate_key)
-        self.generate_key_button_decrypt.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
-
         tk.Label(frame, text="Text to Decrypt:").grid(row=2, column=0, padx=5, pady=5)
         self.text_entry_decrypt = tk.Entry(frame, width=64)
         self.text_entry_decrypt.grid(row=2, column=1, padx=5, pady=5)
@@ -140,9 +137,6 @@ class AESApp:
         tk.Label(frame, text="Decryption Key:").grid(row=0, column=0, padx=5, pady=5)
         self.key_entry_decrypt_file = tk.Entry(frame, width=64)
         self.key_entry_decrypt_file.grid(row=0, column=1, padx=5, pady=5)
-
-        self.generate_key_button_decrypt_file = tk.Button(frame, text="Generate Key", width=20, command=self.generate_key)
-        self.generate_key_button_decrypt_file.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
 
         self.file_button_decrypt = tk.Button(frame, text="Choose File", width=20, command=self.choose_file_decrypt)
         self.file_button_decrypt.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
