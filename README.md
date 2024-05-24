@@ -24,7 +24,7 @@ This project provides a graphical user interface (GUI) for encrypting and decryp
 
     **On Windows:**
     ```cmd
-    python -m venv venv
+    python3 -m venv venv
     venv\Scripts\activate
     ```
 
