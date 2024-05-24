@@ -16,9 +16,16 @@ This project provides a graphical user interface (GUI) for encrypting and decryp
     ```
 
 2. **Create and activate a virtual environment** (recommended):
+    **On macOS/Linux:**
     ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
+
+    **On Windows:**
+    ```cmd
     python -m venv venv
-    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+    venv\Scripts\activate
     ```
 
 3. **Install the dependencies**:
