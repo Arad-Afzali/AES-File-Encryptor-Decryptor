@@ -11,6 +11,8 @@ class AESApp:
         self.root.title("AES Encryption/Decryption")
         
         self.key = ""
+        self.encrypt_file_path = None  # Initialize encrypt_file_path
+        self.decrypt_file_path = None  # Initialize decrypt_file_path
         
         self.create_widgets()
 
@@ -109,7 +111,7 @@ class AESApp:
             encrypted_text = encrypt.encrypt_text(key, text)
             self.encrypted_text_output.delete(1.0, tk.END)
             self.encrypted_text_output.insert(tk.END, encrypted_text)
-        elif key and hasattr(self, 'encrypt_file_path'):
+        elif key and self.encrypt_file_path:
             encrypted_file = encrypt.encrypt_file(key, self.encrypt_file_path)
             messagebox.showinfo("Encrypted File", f"File saved as {encrypted_file}")
         else:
@@ -126,7 +128,7 @@ class AESApp:
                 self.decrypted_text_output.insert(tk.END, decrypted_text)
             except Exception as e:
                 messagebox.showerror("Decryption Error", f"An error occurred during decryption: {e}")
-        elif key and hasattr(self, 'decrypt_file_path'):
+        elif key and self.decrypt_file_path:
             try:
                 decrypted_file = decrypt.decrypt_file(key, self.decrypt_file_path)
                 messagebox.showinfo("Decrypted File", f"File saved as {decrypted_file}")
@@ -135,21 +137,6 @@ class AESApp:
         else:
             messagebox.showerror("Error", "Please provide text or choose a file and key for decryption.")
 
-    def encrypt_file(self):
-        if hasattr(self, 'enc_file_path'):
-            key = self.enc_key_entry.get()
-            encrypted_filepath = encrypt.encrypt_file(key, self.enc_file_path)
-            self.enc_output_text.delete('1.0', tk.END)
-            self.enc_output_text.insert(tk.END, f"Encrypted file saved as: {encrypted_filepath}")
-            return encrypted_filepath
-
-    def decrypt_file(self):
-        if hasattr(self, 'dec_file_path'):
-            password = self.dec_key_entry.get()
-            decrypted_filepath = decrypt.decrypt_file(password, self.dec_file_path)
-            self.dec_output_text.delete('1.0', tk.END)
-            self.dec_output_text.insert(tk.END, f"Decrypted file saved as: {decrypted_filepath}")
-            return decrypted_filepath
 if __name__ == "__main__":
     root = tk.Tk()
     app = AESApp(root)
