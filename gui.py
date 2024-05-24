@@ -45,13 +45,16 @@ class AESApp:
         
         self.file_button_encrypt = tk.Button(frame, text="Choose File", width=20, command=self.choose_file_encrypt)
         self.file_button_encrypt.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
+
+        self.file_label_encrypt = tk.Label(frame, text="", wraplength=400)
+        self.file_label_encrypt.grid(row=4, column=0, columnspan=2, padx=5, pady=5)
         
         self.encrypt_button = tk.Button(frame, text="Encrypt", width=20, command=self.encrypt_data)
-        self.encrypt_button.grid(row=4, column=0, columnspan=2, padx=5, pady=5)
+        self.encrypt_button.grid(row=5, column=0, columnspan=2, padx=5, pady=5)
 
-        tk.Label(frame, text="Encrypted Text:").grid(row=5, column=0, padx=5, pady=5)
+        tk.Label(frame, text="Encrypted Text:").grid(row=6, column=0, padx=5, pady=5)
         self.encrypted_text_output = tk.Text(frame, width=64, height=10)
-        self.encrypted_text_output.grid(row=5, column=1, padx=5, pady=5)
+        self.encrypted_text_output.grid(row=6, column=1, padx=5, pady=5)
 
     def create_decrypt_tab(self):
         frame = tk.Frame(self.tab_decrypt)
@@ -70,13 +73,16 @@ class AESApp:
         
         self.file_button_decrypt = tk.Button(frame, text="Choose File", width=20, command=self.choose_file_decrypt)
         self.file_button_decrypt.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
+
+        self.file_label_decrypt = tk.Label(frame, text="", wraplength=400)
+        self.file_label_decrypt.grid(row=4, column=0, columnspan=2, padx=5, pady=5)
         
         self.decrypt_button = tk.Button(frame, text="Decrypt", width=20, command=self.decrypt_data)
-        self.decrypt_button.grid(row=4, column=0, columnspan=2, padx=5, pady=5)
+        self.decrypt_button.grid(row=5, column=0, columnspan=2, padx=5, pady=5)
 
-        tk.Label(frame, text="Decrypted Text:").grid(row=5, column=0, padx=5, pady=5)
+        tk.Label(frame, text="Decrypted Text:").grid(row=6, column=0, padx=5, pady=5)
         self.decrypted_text_output = tk.Text(frame, width=64, height=10)
-        self.decrypted_text_output.grid(row=5, column=1, padx=5, pady=5)
+        self.decrypted_text_output.grid(row=6, column=1, padx=5, pady=5)
 
     def generate_key(self):
         self.key = generatekey.generate_key()
@@ -87,9 +93,13 @@ class AESApp:
 
     def choose_file_encrypt(self):
         self.encrypt_file_path = filedialog.askopenfilename()
+        if self.encrypt_file_path:
+            self.file_label_encrypt.config(text=self.encrypt_file_path)
     
     def choose_file_decrypt(self):
         self.decrypt_file_path = filedialog.askopenfilename()
+        if self.decrypt_file_path:
+            self.file_label_decrypt.config(text=self.decrypt_file_path)
     
     def encrypt_data(self):
         key = self.key_entry_encrypt.get()
