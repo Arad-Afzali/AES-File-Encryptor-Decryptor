@@ -59,6 +59,19 @@ This project provides a graphical user interface (GUI) for encrypting and decryp
 - **decrypt.py**: Provides functions to decrypt AES-encrypted files.
 - **newgui.py**: Defines the graphical user interface using `tkinter`.
 
+## Note on Key Management
+
+When you encrypt a file, the encryption key is saved in a text file beside the encrypted file. It is crucial to save this key securely, as it is required for decrypting the file. If the key is lost, the encrypted file cannot be decrypted, and its contents will be irretrievable.
+
+### Warnings
+
+- **Store the Key Securely**: Ensure that the key file is stored in a secure location. Do not leave it in a publicly accessible or unprotected directory.
+- **Backup the Key**: Make backups of the key file in case of accidental deletion or hardware failure.
+- **Do Not Share the Key**: Do not share the key file with unauthorized individuals. Anyone with access to the key can decrypt the corresponding file.
+- **Encryption Safety**: Be aware that if the key file is compromised, the security of the encrypted file is also compromised.
+- **Manual Key Management**: The text encryption key is not saved anywhere else by the application. Users must manually save this key and ensure its security. If the key is lost, the encrypted file cannot be decrypted.
+
+
 ## Dependencies
 
 The project requires the following Python packages, listed in `requirements.txt`:
@@ -69,3 +82,16 @@ cryptography==42.0.7
 pycparser==2.22
 pycryptodome==3.20.0
 tk==0.1.0
+
+
+## Notes
+
+- Ensure you have the necessary permissions to execute scripts on your operating system.
+- This project uses the `pycryptodome` library for cryptographic functions.
+- If you encounter any issues, please open an issue on GitHub.
+- **Manual Key Management**: The text encryption key is not saved anywhere else by the application. Users must manually save this key and ensure its security. If the key is lost, the encrypted file cannot be decrypted.
+
+## Future Work
+
+The following enhancements are planned for future releases:
+- **Password Protection for Keys**: Add functionality to encrypt the key file with a user-provided password. This will add an extra layer of security, ensuring that even if the key file is compromised, it cannot be used without the password.
