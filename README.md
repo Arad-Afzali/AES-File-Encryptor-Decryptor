@@ -46,8 +46,8 @@ This project provides a graphical user interface (GUI) for encrypting and decryp
 
 2. **Using the GUI**:
     - **Generate Key**: Use the 'Generate Key' button to create a new encryption key.
-    - **Encrypt File**: Select a file and click the 'Encrypt' button to encrypt it using the generated key.
-    - **Decrypt File**: Select an encrypted file and click the 'Decrypt' button to decrypt it.
+    - **Encrypt File and Text**: Select a file or enter text, then click the ‘Encrypt’ button to encrypt it using the generated key.
+    - **Decrypt File and Text**: Select an encrypted file or paste encrypted text, then click the ‘Decrypt’ button to decrypt it.
 
 
 ### Main Components
