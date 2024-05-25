@@ -82,7 +82,7 @@ cryptography==42.0.7
 pycparser==2.22
 pycryptodome==3.20.0
 tk==0.1.0
-
+```
 
 ## Notes
 
