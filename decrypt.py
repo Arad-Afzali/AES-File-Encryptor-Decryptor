@@ -11,7 +11,12 @@ def decrypt_text(key, ciphertext):
     iv = ciphertext[:AES.block_size]
     cipher = AES.new(binascii.unhexlify(key), AES.MODE_CBC, iv)
     decrypted = cipher.decrypt(ciphertext[AES.block_size:])
-    return unpad(decrypted).decode()
+    result = unpad(decrypted).decode()
+    
+    # Securely clear sensitive data
+    del decrypted, ciphertext, key
+    
+    return result
 
 def decrypt_file(key, filepath, progress_callback=None):
     decrypted_filepath = filepath.replace('.enc', '')
@@ -29,5 +34,8 @@ def decrypt_file(key, filepath, progress_callback=None):
             f_out.write(chunk)
             if progress_callback:
                 progress_callback((i + 1) / total_chunks * 100)
+    
+    # Securely clear sensitive data
+    del iv, key, cipher
     
     return decrypted_filepath

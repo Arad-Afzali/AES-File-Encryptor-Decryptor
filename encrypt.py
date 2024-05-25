@@ -15,8 +15,14 @@ def unpad(data):
 def encrypt_text(key, plaintext):
     iv = secrets.token_bytes(AES.block_size)
     cipher = AES.new(binascii.unhexlify(key), AES.MODE_CBC, iv)
-    encrypted = iv + cipher.encrypt(pad(plaintext.encode()))
-    return binascii.hexlify(encrypted).decode()
+    padded_data = pad(plaintext.encode())
+    encrypted = iv + cipher.encrypt(padded_data)
+    result = binascii.hexlify(encrypted).decode()
+    
+    # Securely clear sensitive data
+    del padded_data, plaintext, key
+    
+    return result
 
 def encrypt_file(key, filepath, progress_callback=None):
     iv = secrets.token_bytes(AES.block_size)
@@ -35,4 +41,8 @@ def encrypt_file(key, filepath, progress_callback=None):
                 progress_callback((i + 1) / total_chunks * 100)
     with open(filepath + "_key.txt", 'w') as key_file:
         key_file.write(key)
+    
+    # Securely clear sensitive data
+    del iv, key, cipher
+    
     return encrypted_filepath
