@@ -89,7 +89,6 @@ tk==0.1.0
 - Ensure you have the necessary permissions to execute scripts on your operating system.
 - This project uses the `pycryptodome` library for cryptographic functions.
 - If you encounter any issues, please open an issue on GitHub.
-- **Manual Key Management**: The text encryption key is not saved anywhere else by the application. Users must manually save this key and ensure its security. If the key is lost, the encrypted file cannot be decrypted.
 
 ## Future Work
 
