@@ -69,7 +69,7 @@ When you encrypt a file, the encryption key is saved in a text file beside the e
 - **Backup the Key**: Make backups of the key file in case of accidental deletion or hardware failure.
 - **Do Not Share the Key**: Do not share the key file with unauthorized individuals. Anyone with access to the key can decrypt the corresponding file.
 - **Encryption Safety**: Be aware that if the key file is compromised, the security of the encrypted file is also compromised.
-- **Manual Key Management**: The text encryption key is not saved anywhere else by the application. Users must manually save this key and ensure its security. If the key is lost, the encrypted file cannot be decrypted.
+- **Manual Key Management**: The text encryption key is not saved anywhere else by the application. Users must manually save this key and ensure its security. If the key is lost, the encrypted text cannot be decrypted.
 
 
 ## Dependencies
