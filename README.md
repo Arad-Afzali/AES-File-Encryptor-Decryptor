@@ -41,7 +41,7 @@ This project provides a graphical user interface (GUI) for encrypting and decryp
 
 1. **Run the main script**:
     ```bash
-    python Main.py
+    python3 main.py
     ```
 
 2. **Using the GUI**:
