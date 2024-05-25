@@ -1,7 +1,7 @@
 # AES Encryption and Decryption Project
 
 This project provides a graphical user interface (GUI) for encrypting and decrypting files using AES (Advanced Encryption Standard) encryption. The application supports key generation, file encryption, and file decryption.
-![alt text](<ss/Screenshot 1403-03-05 at 03.41.04.png>)     ![alt text](<ss/Screenshot 1403-03-05 at 03.41.22.png>)
+| ![alt text](<ss/Screenshot 1403-03-05 at 03.41.04.png>) | ![alt text](<ss/Screenshot 1403-03-05 at 03.41.22.png>) |
 ## Prerequisites
 
 - Python 3.8 or higher
