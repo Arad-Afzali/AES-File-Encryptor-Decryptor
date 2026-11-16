@@ -1,189 +1,234 @@
+import os
+import queue
+import threading
 import tkinter as tk
-from tkinter import filedialog, messagebox
-from tkinter import ttk
-import generatekey
-import multiprocessing
-import worker
+from tkinter import ttk, filedialog, messagebox
+
+import aes_crypto
+
 
 class AESApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("AES Encryption/Decryption")
+        self.root.title("AES File Encryptor")
+        self.root.geometry("640x540")
+        self.root.minsize(560, 500)
 
-        self.key = ""
+        # The worker thread puts its progress here and the GUI reads it,
+        # because tkinter widgets may only be changed from the main thread.
+        self.events = queue.Queue()
+        self.busy = False
 
-        self.create_widgets()
+        self.mode = tk.IntVar(value=aes_crypto.MODE_PASSWORD)
+        self.show_secret = tk.BooleanVar(value=False)
+        self.file_path = tk.StringVar()
+        self.status = tk.StringVar(value="Ready")
 
-    def create_widgets(self):
-        self.tab_control = ttk.Notebook(self.root)
+        outer = ttk.Frame(root, padding=12)
+        outer.pack(fill="both", expand=True)
+        ttk.Label(outer, textvariable=self.status, foreground="#888").pack(side="bottom", anchor="w", pady=(8, 0))
+        self.create_key_box(outer)
+        self.create_tabs(outer)
 
-        self.tab_encrypt = tk.Frame(self.tab_control)
-        self.tab_decrypt = tk.Frame(self.tab_control)
+        self.update_mode()
+        self.root.after(100, self.check_events)
 
-        self.tab_control.add(self.tab_encrypt, text='Encrypt')
-        self.tab_control.add(self.tab_decrypt, text='Decrypt')
+    # ---------- widgets ----------
 
-        self.create_encrypt_tab()
-        self.create_decrypt_tab()
+    def create_key_box(self, parent):
+        box = ttk.LabelFrame(parent, text="Key", padding=10)
+        box.pack(fill="x")
 
-        self.tab_control.pack(expand=1, fill='both')
+        modes = ttk.Frame(box)
+        modes.pack(fill="x")
+        ttk.Radiobutton(modes, text="Password", variable=self.mode,
+                        value=aes_crypto.MODE_PASSWORD, command=self.update_mode).pack(side="left")
+        ttk.Radiobutton(modes, text="256-bit key (hex)", variable=self.mode,
+                        value=aes_crypto.MODE_KEY, command=self.update_mode).pack(side="left", padx=12)
+        ttk.Checkbutton(modes, text="Show", variable=self.show_secret,
+                        command=self.update_mode).pack(side="right")
 
-    def create_encrypt_tab(self):
-        frame = tk.Frame(self.tab_encrypt)
-        frame.pack(padx=10, pady=10)
+        row = ttk.Frame(box)
+        row.pack(fill="x", pady=(8, 0))
+        self.secret_entry = ttk.Entry(row, font=("Menlo", 11))
+        self.secret_entry.pack(side="left", fill="x", expand=True)
+        self.generate_button = ttk.Button(row, text="Generate", command=self.generate_key)
+        self.generate_button.pack(side="left", padx=(6, 0))
+        ttk.Button(row, text="Copy", command=lambda: self.copy(self.secret_entry.get())).pack(side="left", padx=(6, 0))
 
-        tk.Label(frame, text="Encryption Key:").grid(row=0, column=0, padx=5, pady=5)
-        self.key_entry_encrypt = tk.Entry(frame, width=64)
-        self.key_entry_encrypt.grid(row=0, column=1, padx=5, pady=5)
+        self.key_hint = ttk.Label(box, foreground="#888")
+        self.key_hint.pack(anchor="w", pady=(6, 0))
 
-        self.generate_key_button_encrypt = tk.Button(frame, text="Generate Key", width=20, command=self.generate_key)
-        self.generate_key_button_encrypt.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
+    def create_tabs(self, parent):
+        tabs = ttk.Notebook(parent)
+        tabs.pack(fill="both", expand=True, pady=(12, 0))
 
-        tk.Label(frame, text="Text to Encrypt:").grid(row=2, column=0, padx=5, pady=5)
-        self.text_entry_encrypt = tk.Entry(frame, width=64)
-        self.text_entry_encrypt.grid(row=2, column=1, padx=5, pady=5)
+        # Text tab
+        text_tab = ttk.Frame(tabs, padding=10)
+        tabs.add(text_tab, text="Text")
 
-        self.file_button_encrypt = tk.Button(frame, text="Choose File", width=20, command=self.choose_file_encrypt)
-        self.file_button_encrypt.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
+        ttk.Label(text_tab, text="Input").pack(anchor="w")
+        self.input_text = tk.Text(text_tab, height=6, wrap="word", font=("Menlo", 11),
+                                  relief="solid", borderwidth=1)
+        self.input_text.pack(fill="both", expand=True, pady=(2, 8))
 
-        self.file_label_encrypt = tk.Label(frame, text="", wraplength=400)
-        self.file_label_encrypt.grid(row=4, column=0, columnspan=2, padx=5, pady=5)
+        buttons = ttk.Frame(text_tab)
+        buttons.pack(fill="x")
+        ttk.Button(buttons, text="Encrypt", command=self.encrypt_text).pack(side="left")
+        ttk.Button(buttons, text="Decrypt", command=self.decrypt_text).pack(side="left", padx=6)
+        ttk.Button(buttons, text="Copy output",
+                   command=lambda: self.copy(self.output_text.get("1.0", "end").strip())).pack(side="right")
 
-        self.encrypt_button = tk.Button(frame, text="Encrypt", width=20, command=self.encrypt_data)
-        self.encrypt_button.grid(row=5, column=0, columnspan=2, padx=5, pady=5)
+        ttk.Label(text_tab, text="Output").pack(anchor="w", pady=(8, 0))
+        self.output_text = tk.Text(text_tab, height=6, wrap="char", font=("Menlo", 11),
+                                   relief="solid", borderwidth=1, state="disabled")
+        self.output_text.pack(fill="both", expand=True, pady=(2, 0))
 
-        self.progress_bar_encrypt = ttk.Progressbar(frame, orient='horizontal', length=400, mode='determinate')
-        self.progress_bar_encrypt.grid(row=6, column=0, columnspan=2, padx=5, pady=5)
+        # File tab
+        file_tab = ttk.Frame(tabs, padding=10)
+        tabs.add(file_tab, text="File")
 
-        tk.Label(frame, text="Encrypted Text:").grid(row=7, column=0, padx=5, pady=5)
-        self.encrypted_text_output = tk.Text(frame, width=64, height=10)
-        self.encrypted_text_output.grid(row=7, column=1, padx=5, pady=5)
+        ttk.Label(file_tab, text="File").pack(anchor="w")
+        row = ttk.Frame(file_tab)
+        row.pack(fill="x", pady=(2, 10))
+        ttk.Entry(row, textvariable=self.file_path).pack(side="left", fill="x", expand=True)
+        ttk.Button(row, text="Browse...", command=self.browse).pack(side="left", padx=(6, 0))
 
-    def create_decrypt_tab(self):
-        frame = tk.Frame(self.tab_decrypt)
-        frame.pack(padx=10, pady=10)
+        buttons = ttk.Frame(file_tab)
+        buttons.pack(fill="x")
+        self.encrypt_file_button = ttk.Button(buttons, text="Encrypt file", command=self.encrypt_file)
+        self.encrypt_file_button.pack(side="left")
+        self.decrypt_file_button = ttk.Button(buttons, text="Decrypt file", command=self.decrypt_file)
+        self.decrypt_file_button.pack(side="left", padx=6)
 
-        tk.Label(frame, text="Decryption Key:").grid(row=0, column=0, padx=5, pady=5)
-        self.key_entry_decrypt = tk.Entry(frame, width=64)
-        self.key_entry_decrypt.grid(row=0, column=1, padx=5, pady=5)
+        self.progress = ttk.Progressbar(file_tab, maximum=100)
+        self.progress.pack(fill="x", pady=(14, 4))
+        ttk.Label(file_tab, foreground="#888", wraplength=520, justify="left",
+                  text="Encrypting writes <file>.enc next to the file. Decrypting never "
+                       "overwrites a file: if the name is taken, a number is added.").pack(anchor="w", pady=(8, 0))
 
-        self.generate_key_button_decrypt = tk.Button(frame, text="Generate Key", width=20, command=self.generate_key)
-        self.generate_key_button_decrypt.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
+    # ---------- key ----------
 
-        tk.Label(frame, text="Text to Decrypt:").grid(row=2, column=0, padx=5, pady=5)
-        self.text_entry_decrypt = tk.Entry(frame, width=64)
-        self.text_entry_decrypt.grid(row=2, column=1, padx=5, pady=5)
-
-        self.file_button_decrypt = tk.Button(frame, text="Choose File", width=20, command=self.choose_file_decrypt)
-        self.file_button_decrypt.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
-
-        self.file_label_decrypt = tk.Label(frame, text="", wraplength=400)
-        self.file_label_decrypt.grid(row=4, column=0, columnspan=2, padx=5, pady=5)
-
-        self.decrypt_button = tk.Button(frame, text="Decrypt", width=20, command=self.decrypt_data)
-        self.decrypt_button.grid(row=5, column=0, columnspan=2, padx=5, pady=5)
-
-        self.progress_bar_decrypt = ttk.Progressbar(frame, orient='horizontal', length=400, mode='determinate')
-        self.progress_bar_decrypt.grid(row=6, column=0, columnspan=2, padx=5, pady=5)
-
-        tk.Label(frame, text="Decrypted Text:").grid(row=7, column=0, padx=5, pady=5)
-        self.decrypted_text_output = tk.Text(frame, width=64, height=10)
-        self.decrypted_text_output.grid(row=7, column=1, padx=5, pady=5)
+    def update_mode(self):
+        hidden = self.mode.get() == aes_crypto.MODE_PASSWORD and not self.show_secret.get()
+        self.secret_entry.config(show="•" if hidden else "")
+        if self.mode.get() == aes_crypto.MODE_PASSWORD:
+            self.generate_button.state(["disabled"])
+            self.key_hint.config(text="The key is made from the password with scrypt and a random salt.")
+        else:
+            self.generate_button.state(["!disabled"])
+            self.key_hint.config(text="Keep the key safe: without it the data cannot be decrypted.")
 
     def generate_key(self):
-        self.key = generatekey.generate_key()
-        self.key_entry_encrypt.delete(0, tk.END)
-        self.key_entry_encrypt.insert(0, self.key)
-        self.key_entry_decrypt.delete(0, tk.END)
-        self.key_entry_decrypt.insert(0, self.key)
+        self.secret_entry.delete(0, "end")
+        self.secret_entry.insert(0, aes_crypto.generate_key())
+        self.status.set("New key generated. Save it somewhere safe.")
 
-    def choose_file_encrypt(self):
-        self.encrypt_file_path = filedialog.askopenfilename()
-        if self.encrypt_file_path:
-            self.file_label_encrypt.config(text=self.encrypt_file_path)
+    def get_secret(self):
+        secret = self.secret_entry.get()
+        if not secret:
+            messagebox.showwarning("No key", "Enter a password or a key first.")
+            return None
+        return secret
 
-    def choose_file_decrypt(self):
-        self.decrypt_file_path = filedialog.askopenfilename()
-        if self.decrypt_file_path:
-            self.file_label_decrypt.config(text=self.decrypt_file_path)
+    def copy(self, text):
+        if text:
+            self.root.clipboard_clear()
+            self.root.clipboard_append(text)
+            self.status.set("Copied to the clipboard.")
 
-    def encrypt_data(self):
-        key = self.key_entry_encrypt.get()
-        text = self.text_entry_encrypt.get()
-        self.progress_queue = multiprocessing.Queue()
-        self.result_queue = multiprocessing.Queue()
+    # ---------- text ----------
 
-        if key and text:
-            self.progress_bar_encrypt['value'] = 0
-            self.process = multiprocessing.Process(target=worker.encrypt_text_process, args=(key, text, self.progress_queue, self.result_queue))
-            self.process.start()
-            self.root.after(100, self.check_process_encrypt)
-        elif key and hasattr(self, 'encrypt_file_path'):
-            self.progress_bar_encrypt['value'] = 0
-            self.process = multiprocessing.Process(target=worker.encrypt_file_process, args=(key, self.encrypt_file_path, self.progress_queue, self.result_queue))
-            self.process.start()
-            self.root.after(100, self.check_process_encrypt)
-        else:
-            messagebox.showerror("Error", "Please provide text or choose a file and key for encryption.")
+    def set_output(self, text):
+        self.output_text.config(state="normal")
+        self.output_text.delete("1.0", "end")
+        self.output_text.insert("1.0", text)
+        self.output_text.config(state="disabled")
 
-    def decrypt_data(self):
-        key = self.key_entry_decrypt.get()
-        text = self.text_entry_decrypt.get().strip()
-        self.progress_queue = multiprocessing.Queue()
-        self.result_queue = multiprocessing.Queue()
+    def encrypt_text(self):
+        secret = self.get_secret()
+        text = self.input_text.get("1.0", "end-1c")
+        if secret is None or not text:
+            return
+        try:
+            self.set_output(aes_crypto.encrypt_text(text, secret, self.mode.get()))
+            self.status.set("Text encrypted (AES-256-GCM, base64).")
+        except ValueError as e:
+            messagebox.showerror("Error", str(e))
 
-        if key and text:
-            self.progress_bar_decrypt['value'] = 0
-            self.process = multiprocessing.Process(target=worker.decrypt_text_process, args=(key, text, self.progress_queue, self.result_queue))
-            self.process.start()
-            self.root.after(100, self.check_process_decrypt)
-        elif key and hasattr(self, 'decrypt_file_path'):
-            self.progress_bar_decrypt['value'] = 0
-            self.process = multiprocessing.Process(target=worker.decrypt_file_process, args=(key, self.decrypt_file_path, self.progress_queue, self.result_queue))
-            self.process.start()
-            self.root.after(100, self.check_process_decrypt)
-        else:
-            messagebox.showerror("Error", "Please provide text or choose a file and key for decryption.")
+    def decrypt_text(self):
+        secret = self.get_secret()
+        data = self.input_text.get("1.0", "end-1c")
+        if secret is None or not data.strip():
+            return
+        try:
+            self.set_output(aes_crypto.decrypt_text(data, secret))
+            self.status.set("Text decrypted and verified.")
+        except (ValueError, aes_crypto.DecryptionError) as e:
+            self.set_output("")
+            messagebox.showerror("Decryption failed", str(e))
 
-    def check_process_encrypt(self):
-        if self.process.is_alive():
-            self.root.after(100, self.check_process_encrypt)
-            self.update_progress(self.progress_bar_encrypt, self.progress_queue)
-        else:
-            self.process.join()
-            if not self.result_queue.empty():
-                result = self.result_queue.get()
-                if isinstance(result, str):
-                    self.encrypted_text_output.delete(1.0, tk.END)
-                    self.encrypted_text_output.insert(tk.END, result)
-                elif isinstance(result, dict) and 'file' in result:
-                    encrypted_file = result['file']
-                    messagebox.showinfo("Encryption Complete", f"File encrypted successfully: {encrypted_file}")
-            self.progress_bar_encrypt['value'] = 0
+    # ---------- files ----------
 
-    def check_process_decrypt(self):
-        if self.process.is_alive():
-            self.root.after(100, self.check_process_decrypt)
-            self.update_progress(self.progress_bar_decrypt, self.progress_queue)
-        else:
-            self.process.join()
-            if not self.result_queue.empty():
-                result = self.result_queue.get()
-                if isinstance(result, str):
-                    self.decrypted_text_output.delete(1.0, tk.END)
-                    self.decrypted_text_output.insert(tk.END, result)
-                elif isinstance(result, dict) and 'file' in result:
-                    decrypted_file = result['file']
-                    messagebox.showinfo("Decryption Complete", f"File decrypted successfully: {decrypted_file}")
-            self.progress_bar_decrypt['value'] = 0
+    def browse(self):
+        path = filedialog.askopenfilename()
+        if path:
+            self.file_path.set(path)
 
-    def update_progress(self, progress_bar, progress_queue):
-        while not progress_queue.empty():
-            value = progress_queue.get()
-            progress_bar['value'] = value
-            self.root.update_idletasks()
+    def encrypt_file(self):
+        self.start_file_job("encrypt")
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = AESApp(root)
-    root.mainloop()
+    def decrypt_file(self):
+        self.start_file_job("decrypt")
+
+    def start_file_job(self, action):
+        if self.busy:
+            return
+        secret = self.get_secret()
+        path = self.file_path.get()
+        if secret is None:
+            return
+        if not os.path.isfile(path):
+            messagebox.showwarning("No file", "Choose a file first.")
+            return
+
+        self.busy = True
+        self.encrypt_file_button.state(["disabled"])
+        self.decrypt_file_button.state(["disabled"])
+        self.progress["value"] = 0
+        self.status.set("Encrypting..." if action == "encrypt" else "Decrypting...")
+        mode = self.mode.get()
+        threading.Thread(target=self.file_job, args=(action, path, secret, mode), daemon=True).start()
+
+    def file_job(self, action, path, secret, mode):
+        # Runs in a background thread so the window does not freeze
+        def progress(done, total):
+            self.events.put(("progress", done * 100 / total if total else 100))
+
+        try:
+            if action == "encrypt":
+                out = aes_crypto.encrypt_file(path, secret, mode, progress)
+            else:
+                out = aes_crypto.decrypt_file(path, secret, progress)
+            self.events.put(("done", out))
+        except (ValueError, aes_crypto.DecryptionError, OSError) as e:
+            self.events.put(("error", str(e)))
+
+    def check_events(self):
+        while not self.events.empty():
+            kind, value = self.events.get()
+            if kind == "progress":
+                self.progress["value"] = value
+            else:
+                self.busy = False
+                self.encrypt_file_button.state(["!disabled"])
+                self.decrypt_file_button.state(["!disabled"])
+                if kind == "done":
+                    self.progress["value"] = 100
+                    self.status.set(f"Saved as {os.path.basename(value)}")
+                    messagebox.showinfo("Done", f"Saved as:\n{value}")
+                else:
+                    self.progress["value"] = 0
+                    self.status.set("Failed.")
+                    messagebox.showerror("Error", value)
+        self.root.after(100, self.check_events)

@@ -1,11 +1,8 @@
-import generatekey
-import encrypt
-import decrypt
-import newgui
+import tkinter as tk
+
+from gui import AESApp
 
 if __name__ == "__main__":
-    import tkinter as tk
-    
     root = tk.Tk()
-    app = newgui.AESApp(root)
+    AESApp(root)
     root.mainloop()

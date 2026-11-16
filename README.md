@@ -1,24 +1,36 @@
 # AES File Encryptor and Decryptor
 
-A desktop app written in Python that encrypts and decrypts files and text with AES, using a simple tkinter interface.
+A desktop app in Python that encrypts and decrypts files and text with AES-256-GCM. You can use a password or a random 256-bit key, and any change to the encrypted data is detected when you decrypt it.
+
+![Encrypting text with a password](screenshots/text.png)
 
 ## Features
 
-- Generates a random 256-bit AES key (shown as a hex string).
-- Encrypts and decrypts text.
-- Encrypts and decrypts files.
-- Uses AES in CBC mode with a random IV that is stored at the start of the output.
-- Shows a progress bar for each operation.
-- Runs the work in a separate process so the window stays responsive.
+- **AES-256-GCM.** Encryption and integrity check in one: a wrong key, a changed byte or a cut-off file is rejected instead of giving garbage output.
+- **Password or key.** A password is turned into a key with scrypt and a random salt, so the same password gives a different key for every file. Or generate a random 256-bit key and keep it yourself.
+- **Large files.** Files are encrypted in 64 KB chunks, so they never have to fit in memory. Each chunk has its own nonce and tag, and the last chunk is marked, so removing chunks from the end is detected too.
+- **Text.** Encrypted text comes out as base64, so you can paste it into a message or an email.
+- **Safe output names.** Encrypting writes `<file>.enc`. Decrypting removes `.enc`, and if a file with that name is already there, a number is added instead of overwriting it.
+- **Responsive GUI.** Files are processed in a background thread with a real progress bar.
 
-## Screenshots
+![Encrypting a file with a generated key](screenshots/file.png)
 
-![alt text](<ss/Screenshot 1403-03-05 at 03.41.04.png>)
-![alt text](<ss/Screenshot 1403-03-05 at 03.41.22.png>)
+## File format
+
+| Part | Size | What it is |
+|---|---|---|
+| `AESF` | 4 bytes | Marks a file made by this tool |
+| version | 1 byte | Format version (1) |
+| mode | 1 byte | 0 = key, 1 = password |
+| salt | 16 bytes | Salt for scrypt (random even in key mode) |
+| nonce prefix | 8 bytes | Random; a 4-byte chunk counter is added to make each nonce |
+| chunks | ... | Each 64 KB of data, encrypted, plus its 16-byte GCM tag |
+
+The header and a "last chunk" flag are authenticated with every chunk, so they cannot be changed either.
 
 ## Installation
 
-You need Python 3.8 or higher and `pip`.
+You need Python 3.8 or higher, with tkinter.
 
 1. Clone the repository:
     ```bash
@@ -36,65 +48,42 @@ You need Python 3.8 or higher and `pip`.
 
     On Windows:
     ```cmd
-    python3 -m venv venv
+    python -m venv venv
     venv\Scripts\activate
     ```
 
-3. Install the dependencies:
+3. Install the dependencies (only `cryptography`):
     ```bash
     pip install -r requirements.txt
     ```
 
-The packages in `requirements.txt` are:
-
-```plaintext
-cffi==1.16.0
-cryptography==42.0.7
-pycparser==2.22
-pycryptodome==3.20.0
-tk==0.1.0
-```
-
-The cryptographic functions use the `pycryptodome` library.
-
 ## Usage
-
-Start the app:
 
 ```bash
 python3 main.py
 ```
 
-The window has an Encrypt tab and a Decrypt tab. Each one has a text tab and a file tab.
+1. In the **Key** box, choose **Password** and type one, or choose **256-bit key** and click **Generate**. A generated key is not saved anywhere: copy it and keep it safe.
+2. **Text** tab: type or paste text, then click **Encrypt** or **Decrypt**. Use **Copy output** to copy the result.
+3. **File** tab: choose a file, then click **Encrypt file** or **Decrypt file**.
 
-- **Generate Key**: creates a new key and puts it in the key field.
-- **Encrypt Text / Encrypt File**: enter a key, then type text or choose a file and click the encrypt button. A file is saved next to the original with `.enc` added to its name.
-- **Decrypt Text / Decrypt File**: enter the key, then paste the encrypted text or choose an encrypted file and click the decrypt button. For a file, the `.enc` part is removed from the name to make the output file.
+To run the tests:
+
+```bash
+python3 test_aes.py
+```
+
+They check text and files of different sizes (empty, one chunk, several chunks), a flipped bit, a cut-off file and a wrong key.
 
 ## Project files
 
-- `main.py`: starts the GUI.
-- `newgui.py`: the tkinter interface.
-- `worker.py`: runs encryption and decryption in the background and reports progress.
-- `generatekey.py`: generates the keys.
-- `encrypt.py`: encrypts text and files.
-- `decrypt.py`: decrypts text and files.
+| File | What it does |
+|---|---|
+| `main.py` | Starts the app |
+| `gui.py` | The tkinter window |
+| `aes_crypto.py` | Key handling, scrypt, chunked AES-GCM for text and files |
+| `test_aes.py` | Tests |
 
-## Key management
+## Sending a key to someone
 
-When you encrypt a file, the key is saved in a text file next to the original file, named `<original file name>_key.txt`. You need this key to decrypt the file. If the key is lost, the encrypted file cannot be decrypted.
-
-The key for encrypted text is not saved anywhere by the app. You must save it yourself. If it is lost, the encrypted text cannot be decrypted.
-
-- Store the key file in a safe place, not in a public or unprotected folder.
-- Make a backup of the key file in case it is deleted or your disk fails.
-- Do not share the key with people who should not read the data. Anyone with the key can decrypt the matching file or text.
-- If the key file is exposed, the encrypted data is no longer secure.
-
-To send a key to someone safely, you can encrypt it with my RSA project: [RSA Encryption and Decryption](https://github.com/Arad-Afzali/RSA-Encryption-Decryption). It uses a public key to encrypt and a private key to decrypt.
-
-## Limitations and future work
-
-- The key file is saved as plain text. A planned improvement is to protect it with a user-provided password, so the key cannot be used if the file is exposed.
-- Keys are not stored by the app for text, as described above.
-- If you have trouble running the app, make sure you are allowed to run scripts on your system, or open an issue on GitHub.
+Anyone with the key or the password can decrypt the data, so don't send it next to the file. To send a key safely you can encrypt it with my [RSA Encryption and Decryption](https://github.com/Arad-Afzali/RSA-Encryption-Decryption) tool.
